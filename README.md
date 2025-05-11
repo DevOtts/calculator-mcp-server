@@ -223,4 +223,129 @@ mcp.run(transport="stdio")
 
 5. **Debug with logs**: When troubleshooting, add extensive logging to a file - this helps identify where things are breaking.
 
-These lessons should help anyone trying to develop custom MCP servers for Cursor, especially when using Python and FastMCP. 
+These lessons should help anyone trying to develop custom MCP servers for Cursor, especially when using Python and FastMCP.
+
+## Deploying to Cloudflare
+
+This MCP server can be deployed to Cloudflare Workers for remote access.
+
+### Prerequisites
+
+1. Install Cloudflare Wrangler CLI:
+   ```bash
+   npm install -g wrangler
+   ```
+
+2. Authenticate with Cloudflare:
+   ```bash
+   wrangler login
+   ```
+
+### Deployment Steps
+
+1. Make sure you have the Cloudflare deployment files in your project:
+   - `calculator_mcp_cloudflare.py` - MCP server with SSE transport
+   - `wrangler.toml` - Cloudflare Worker configuration
+   - `worker.js` - Worker script that handles requests
+
+2. Test the SSE version locally:
+   ```bash
+   python calculator_mcp_cloudflare.py
+   ```
+   This will start the server on port 8787 with SSE transport.
+   You should see log messages indicating that the server has started successfully:
+   ```
+   INFO:     Uvicorn running on http://127.0.0.1:8787 (Press CTRL+C to quit)
+   ```
+
+3. Verify the server is running:
+   ```bash
+   ps aux | grep calculator
+   ```
+   You should see the calculator_mcp_cloudflare.py process running.
+
+   Note: The MCP server with SSE transport doesn't expose standard REST API endpoints.
+   It uses a special SSE-based protocol that requires an MCP client library to connect properly.
+
+4. For Cloudflare deployment:
+   ```bash
+   wrangler deploy
+   ```
+
+   After successful deployment, you'll see output like:
+   ```
+   Uploaded calculator-mcp-server (3.81 sec)
+   Deployed calculator-mcp-server triggers (3.05 sec)
+     https://calculator-mcp-server.yourusername.workers.dev
+   Current Version ID: df156ba4-92ec-45fe-8413-f335dea4b7d4
+   ```
+
+5. Your MCP server is now available remotely at the displayed URL.
+
+### Troubleshooting SSE Transport
+
+If you encounter issues with the SSE transport:
+
+1. Make sure your fastmcp version supports SSE transport:
+   ```bash
+   pip install "fastmcp>=0.2.0"
+   ```
+
+2. If you get errors about missing modules or attributes, try simplifying your code:
+   - Avoid importing `fastmcp.transport.sse` directly
+   - Use the string "sse" as the transport parameter
+   - Keep your MCP server implementation minimal
+
+3. If you get an error about the address already being in use:
+   ```
+   ERROR: [Errno 48] error while attempting to bind on address ('127.0.0.1', 8787): address already in use
+   ```
+   Either:
+   - Find and stop the existing process: `lsof -i :8787` then `kill <PID>`
+   - Change the port number in calculator_mcp_cloudflare.py
+
+4. Test the server locally before deploying to Cloudflare.
+
+### Connecting to Your Remote MCP Server from Cursor
+
+1. Configure Cursor to connect to your remote MCP server by adding this to `.cursor/mcp.json`:
+   ```json
+   "calculator-mcp": {
+     "remote": true,
+     "url": "https://calculator-mcp-server.yourusername.workers.dev"
+   }
+   ```
+
+2. Restart Cursor and connect to the calculator-mcp server from the MCP Servers section.
+
+### Troubleshooting Cloudflare Deployment
+
+1. Check Cloudflare Worker logs in the dashboard if you encounter issues.
+2. Ensure CORS is properly configured if you experience connection issues.
+3. Verify that your Python dependencies are compatible with Cloudflare Workers.
+4. If you get a "Unknown argument: publish" error, use the newer command:
+   ```bash
+   wrangler deploy
+   ```
+   Newer versions of Wrangler have replaced the "publish" command with "deploy".
+
+### Understanding MCP Protocol
+
+The Model Context Protocol (MCP) operates differently from standard REST APIs:
+
+1. For local development:
+   - The stdio transport uses standard input/output for communication
+   - The SSE transport uses Server-Sent Events over HTTP
+
+2. Connection methods:
+   - Direct connection through Cursor's MCP integration
+   - Connection via an MCP client library like `fastmcp.Client`
+   - SSE connection for remote servers
+
+3. Limitations of testing:
+   - Standard HTTP tools like curl or Postman cannot easily test MCP functionality
+   - The SSE endpoints require special handling of event streams
+   - Tools must follow the MCP protocol for proper communication
+
+4. After deployment, you'll receive a URL for your MCP server, such as:
+   `https://calculator-mcp-server.yourusername.workers.dev` 
