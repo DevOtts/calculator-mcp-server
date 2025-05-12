@@ -297,7 +297,6 @@ To run the server locally for development (e.g., on port 8080):
     ```
     The `--reload` flag will automatically restart the server when code changes are detected.
     You can then access it at `http://localhost:8080`.
-    The health check endpoint will be at `http://localhost:8080/health`.
 
 // ... (Remove previous Cloudflare deployment sections or comment them out) ...
 
