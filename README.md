@@ -223,4 +223,82 @@ mcp.run(transport="stdio")
 
 5. **Debug with logs**: When troubleshooting, add extensive logging to a file - this helps identify where things are breaking.
 
-These lessons should help anyone trying to develop custom MCP servers for Cursor, especially when using Python and FastMCP. 
+These lessons should help anyone trying to develop custom MCP servers for Cursor, especially when using Python and FastMCP.
+
+## Deploying to Fly.io
+
+This MCP server can be deployed to Fly.io using Docker.
+
+### Prerequisites
+
+1.  **Install `flyctl` CLI**: Follow instructions at [https://fly.io/docs/hands-on/install-flyctl/](https://fly.io/docs/hands-on/install-flyctl/).
+2.  **Sign up for Fly.io**: Create an account at [https://fly.io/](https://fly.io/).
+3.  **Login to Fly.io**: Run `flyctl auth login` in your terminal.
+
+### Initial Setup (One-Time)
+
+1.  **Launch the App on Fly.io (Manual First Time Step)**:
+    *   Navigate to your project directory in the terminal.
+    *   Run `flyctl launch`.
+    *   You will be prompted for an **app name**. Choose a unique name (e.g., `yourname-calculator-mcp`) and note it down. This name will be part of your public URL (e.g., `yourname-calculator-mcp.fly.dev`).
+    *   It will ask if you want to create a `fly.toml`. Say **No** (or let it create one and then replace its contents with the `fly.toml` in this repository, making sure to update the `app` name).
+    *   It may ask if you want to deploy immediately. You can choose yes or no.
+    *   This step registers your app with Fly.io and is crucial for subsequent automated deployments.
+
+2.  **Update `fly.toml`**: Ensure the `app` name in your local `fly.toml` file matches the unique app name you selected during `flyctl launch`.
+
+3.  **Create a Fly.io API Token for GitHub Actions**:
+    *   Run the following command, replacing `YOUR_APP_NAME_HERE` with the app name you chose:
+        ```bash
+        flyctl tokens create deploy -a YOUR_APP_NAME_HERE
+        ```
+    *   Copy the generated API token.
+
+4.  **Add the API Token to GitHub Secrets**:
+    *   In your GitHub repository, go to "Settings" > "Secrets and variables" > "Actions".
+    *   Click "New repository secret".
+    *   Name the secret `FLY_API_TOKEN`.
+    *   Paste the API token you copied into the "Secret" field.
+
+### Deployment
+
+*   **Automatic Deployment**: Pushing to the `main` branch (or your default branch as configured in `.github/workflows/fly-deploy.yml`) will automatically trigger a deployment via GitHub Actions.
+*   **Manual Deployment**: You can deploy manually from your local machine using:
+    ```bash
+    flyctl deploy
+    ```
+
+### After Deployment
+
+Your MCP server will be available at `https://YOUR_APP_NAME_HERE.fly.dev`.
+
+### Connecting to Your Remote MCP Server from Cursor
+
+1.  Configure Cursor to connect to your remote MCP server by adding this to `.cursor/mcp.json`:
+    ```json
+    "calculator-mcp": {
+      "remote": true,
+      "url": "https://YOUR_APP_NAME_HERE.fly.dev"
+    }
+    ```
+    Replace `YOUR_APP_NAME_HERE.fly.dev` with your actual Fly.io app URL.
+
+2.  Restart Cursor and connect to the `calculator-mcp` server from the MCP Servers section.
+
+### Local Development
+
+To run the server locally for development (e.g., on port 8080):
+
+1.  Ensure you have Python and pip installed.
+2.  Install dependencies: `pip install -r requirements.txt`
+3.  Run the Uvicorn server directly:
+    ```bash
+    uvicorn calculator_mcp_fly:mcp --host 0.0.0.0 --port 8080 --reload
+    ```
+    The `--reload` flag will automatically restart the server when code changes are detected.
+    You can then access it at `http://localhost:8080`.
+    The health check endpoint will be at `http://localhost:8080/health`.
+
+// ... (Remove previous Cloudflare deployment sections or comment them out) ...
+
+// ... existing code ... 
