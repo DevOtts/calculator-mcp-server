@@ -225,127 +225,80 @@ mcp.run(transport="stdio")
 
 These lessons should help anyone trying to develop custom MCP servers for Cursor, especially when using Python and FastMCP.
 
-## Deploying to Cloudflare
+## Deploying to Fly.io
 
-This MCP server can be deployed to Cloudflare Workers for remote access.
+This MCP server can be deployed to Fly.io using Docker.
 
 ### Prerequisites
 
-1. Install Cloudflare Wrangler CLI:
-   ```bash
-   npm install -g wrangler
-   ```
+1.  **Install `flyctl` CLI**: Follow instructions at [https://fly.io/docs/hands-on/install-flyctl/](https://fly.io/docs/hands-on/install-flyctl/).
+2.  **Sign up for Fly.io**: Create an account at [https://fly.io/](https://fly.io/).
+3.  **Login to Fly.io**: Run `flyctl auth login` in your terminal.
 
-2. Authenticate with Cloudflare:
-   ```bash
-   wrangler login
-   ```
+### Initial Setup (One-Time)
 
-### Deployment Steps
+1.  **Launch the App on Fly.io (Manual First Time Step)**:
+    *   Navigate to your project directory in the terminal.
+    *   Run `flyctl launch`.
+    *   You will be prompted for an **app name**. Choose a unique name (e.g., `yourname-calculator-mcp`) and note it down. This name will be part of your public URL (e.g., `yourname-calculator-mcp.fly.dev`).
+    *   It will ask if you want to create a `fly.toml`. Say **No** (or let it create one and then replace its contents with the `fly.toml` in this repository, making sure to update the `app` name).
+    *   It may ask if you want to deploy immediately. You can choose yes or no.
+    *   This step registers your app with Fly.io and is crucial for subsequent automated deployments.
 
-1. Make sure you have the Cloudflare deployment files in your project:
-   - `calculator_mcp_cloudflare.py` - MCP server with SSE transport
-   - `wrangler.toml` - Cloudflare Worker configuration
-   - `worker.js` - Worker script that handles requests
+2.  **Update `fly.toml`**: Ensure the `app` name in your local `fly.toml` file matches the unique app name you selected during `flyctl launch`.
 
-2. Test the SSE version locally:
-   ```bash
-   python calculator_mcp_cloudflare.py
-   ```
-   This will start the server on port 8787 with SSE transport.
-   You should see log messages indicating that the server has started successfully:
-   ```
-   INFO:     Uvicorn running on http://127.0.0.1:8787 (Press CTRL+C to quit)
-   ```
+3.  **Create a Fly.io API Token for GitHub Actions**:
+    *   Run the following command, replacing `YOUR_APP_NAME_HERE` with the app name you chose:
+        ```bash
+        flyctl tokens create deploy -a YOUR_APP_NAME_HERE
+        ```
+    *   Copy the generated API token.
 
-3. Verify the server is running:
-   ```bash
-   ps aux | grep calculator
-   ```
-   You should see the calculator_mcp_cloudflare.py process running.
+4.  **Add the API Token to GitHub Secrets**:
+    *   In your GitHub repository, go to "Settings" > "Secrets and variables" > "Actions".
+    *   Click "New repository secret".
+    *   Name the secret `FLY_API_TOKEN`.
+    *   Paste the API token you copied into the "Secret" field.
 
-   Note: The MCP server with SSE transport doesn't expose standard REST API endpoints.
-   It uses a special SSE-based protocol that requires an MCP client library to connect properly.
+### Deployment
 
-4. For Cloudflare deployment:
-   ```bash
-   wrangler deploy
-   ```
+*   **Automatic Deployment**: Pushing to the `main` branch (or your default branch as configured in `.github/workflows/fly-deploy.yml`) will automatically trigger a deployment via GitHub Actions.
+*   **Manual Deployment**: You can deploy manually from your local machine using:
+    ```bash
+    flyctl deploy
+    ```
 
-   After successful deployment, you'll see output like:
-   ```
-   Uploaded calculator-mcp-server (3.81 sec)
-   Deployed calculator-mcp-server triggers (3.05 sec)
-     https://calculator-mcp-server.yourusername.workers.dev
-   Current Version ID: df156ba4-92ec-45fe-8413-f335dea4b7d4
-   ```
+### After Deployment
 
-5. Your MCP server is now available remotely at the displayed URL.
-
-### Troubleshooting SSE Transport
-
-If you encounter issues with the SSE transport:
-
-1. Make sure your fastmcp version supports SSE transport:
-   ```bash
-   pip install "fastmcp>=0.2.0"
-   ```
-
-2. If you get errors about missing modules or attributes, try simplifying your code:
-   - Avoid importing `fastmcp.transport.sse` directly
-   - Use the string "sse" as the transport parameter
-   - Keep your MCP server implementation minimal
-
-3. If you get an error about the address already being in use:
-   ```
-   ERROR: [Errno 48] error while attempting to bind on address ('127.0.0.1', 8787): address already in use
-   ```
-   Either:
-   - Find and stop the existing process: `lsof -i :8787` then `kill <PID>`
-   - Change the port number in calculator_mcp_cloudflare.py
-
-4. Test the server locally before deploying to Cloudflare.
+Your MCP server will be available at `https://YOUR_APP_NAME_HERE.fly.dev`.
 
 ### Connecting to Your Remote MCP Server from Cursor
 
-1. Configure Cursor to connect to your remote MCP server by adding this to `.cursor/mcp.json`:
-   ```json
-   "calculator-mcp": {
-     "remote": true,
-     "url": "https://calculator-mcp-server.yourusername.workers.dev"
-   }
-   ```
+1.  Configure Cursor to connect to your remote MCP server by adding this to `.cursor/mcp.json`:
+    ```json
+    "calculator-mcp": {
+      "remote": true,
+      "url": "https://YOUR_APP_NAME_HERE.fly.dev"
+    }
+    ```
+    Replace `YOUR_APP_NAME_HERE.fly.dev` with your actual Fly.io app URL.
 
-2. Restart Cursor and connect to the calculator-mcp server from the MCP Servers section.
+2.  Restart Cursor and connect to the `calculator-mcp` server from the MCP Servers section.
 
-### Troubleshooting Cloudflare Deployment
+### Local Development
 
-1. Check Cloudflare Worker logs in the dashboard if you encounter issues.
-2. Ensure CORS is properly configured if you experience connection issues.
-3. Verify that your Python dependencies are compatible with Cloudflare Workers.
-4. If you get a "Unknown argument: publish" error, use the newer command:
-   ```bash
-   wrangler deploy
-   ```
-   Newer versions of Wrangler have replaced the "publish" command with "deploy".
+To run the server locally for development (e.g., on port 8080):
 
-### Understanding MCP Protocol
+1.  Ensure you have Python and pip installed.
+2.  Install dependencies: `pip install -r requirements.txt`
+3.  Run the Uvicorn server directly:
+    ```bash
+    uvicorn calculator_mcp_fly:mcp --host 0.0.0.0 --port 8080 --reload
+    ```
+    The `--reload` flag will automatically restart the server when code changes are detected.
+    You can then access it at `http://localhost:8080`.
+    The health check endpoint will be at `http://localhost:8080/health`.
 
-The Model Context Protocol (MCP) operates differently from standard REST APIs:
+// ... (Remove previous Cloudflare deployment sections or comment them out) ...
 
-1. For local development:
-   - The stdio transport uses standard input/output for communication
-   - The SSE transport uses Server-Sent Events over HTTP
-
-2. Connection methods:
-   - Direct connection through Cursor's MCP integration
-   - Connection via an MCP client library like `fastmcp.Client`
-   - SSE connection for remote servers
-
-3. Limitations of testing:
-   - Standard HTTP tools like curl or Postman cannot easily test MCP functionality
-   - The SSE endpoints require special handling of event streams
-   - Tools must follow the MCP protocol for proper communication
-
-4. After deployment, you'll receive a URL for your MCP server, such as:
-   `https://calculator-mcp-server.yourusername.workers.dev` 
+// ... existing code ... 
