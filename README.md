@@ -293,7 +293,7 @@ To run the server locally for development (e.g., on port 8080):
 2.  Install dependencies: `pip install -r requirements.txt`
 3.  Run the Uvicorn server directly:
     ```bash
-    uvicorn calculator_mcp_fly:mcp --host 0.0.0.0 --port 8080 --reload
+    uvicorn calculator_mcp_fly:mcp.app --host 0.0.0.0 --port 8080 --reload
     ```
     The `--reload` flag will automatically restart the server when code changes are detected.
     You can then access it at `http://localhost:8080`.

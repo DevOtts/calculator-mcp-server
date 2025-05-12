@@ -23,4 +23,5 @@ ENV HOST 0.0.0.0
 
 # Run calculator_mcp_fly.py when the container launches
 # Use Uvicorn to run the FastMCP/FastAPI application
-CMD ["uvicorn", "calculator_mcp_fly:mcp", "--host", "0.0.0.0", "--port", "8080"] 
+# Point Uvicorn to the internal FastAPI app instance (mcp.app)
+CMD ["uvicorn", "calculator_mcp_fly:mcp.app", "--host", "0.0.0.0", "--port", "8080"] 
