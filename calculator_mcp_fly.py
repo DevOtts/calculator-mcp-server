@@ -4,7 +4,7 @@ Fly.io deployment version of calculator MCP server.
 Uses SSE transport for remote operation.
 """
 import logging
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastmcp import FastMCP
 from asteval import Interpreter
 
@@ -31,21 +31,6 @@ def calculate(expression: str) -> float:
         raise ValueError(error_msg)
     logging.info(f"Result: {result}")
     return result
-
-# Add a health check endpoint for Fly.io
-# This needs to be added to the FastAPI app that FastMCP uses internally
-# We can access the internal FastAPI app via mcp.app after it's initialized by FastMCP
-
-@mcp.on_event("startup")
-async def startup_event():
-    # The FastAPI app is available as mcp.app after FastMCP initialization
-    if hasattr(mcp, 'app') and isinstance(mcp.app, FastAPI):
-        @mcp.app.get("/health", status_code=200)
-        async def health_check():
-            logging.info("Health check endpoint was called")
-            return {"status": "ok"}
-    else:
-        logging.error("FastAPI app not found in FastMCP instance for health check setup.")
 
 # The main execution block is no longer needed for Docker deployment
 # Uvicorn will be called directly via the CMD in the Dockerfile
